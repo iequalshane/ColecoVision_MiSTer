@@ -192,6 +192,8 @@ wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
 wire        forced_scandoubler;
 wire [21:0] gamma_bus;
+
+wire [10:0] ps2_key;
  
 hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 (
@@ -212,8 +214,48 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.ioctl_dout(ioctl_dout),
 
 	.joystick_0(joy0),
-	.joystick_1(joy1)
+	.joystick_1(joy1),
+	
+	.ps2_key(ps2_key)
 );
+
+reg [11:0] keys_pressed;
+always @(posedge clk_sys) begin
+	reg old_stb;
+	reg shift_pressed;
+
+	old_stb <= ps2_key[10];
+	if(old_stb ^ ps2_key[10]) begin
+		if(ps2_key[7:0] == 'h12) shift_pressed <= ps2_key[9]; // Left Shift
+		if(ps2_key[7:0] == 'h59) shift_pressed <= ps2_key[9]; // Right Shift
+	
+		if(ps2_key[7:0] == 'h45) keys_pressed[11] <= (ps2_key[9] & !shift_pressed); // 0
+		if(ps2_key[7:0] == 'h16) keys_pressed[10] <= (ps2_key[9] & !shift_pressed); // 1
+		if(ps2_key[7:0] == 'h1E) keys_pressed[9]  <= (ps2_key[9] & !shift_pressed); // 2
+		if(ps2_key[7:0] == 'h26) keys_pressed[8]  <= (ps2_key[9] & !shift_pressed); // 3
+		if(ps2_key[7:0] == 'h25) keys_pressed[7]  <= (ps2_key[9] & !shift_pressed); // 4
+		if(ps2_key[7:0] == 'h2E) keys_pressed[6]  <= (ps2_key[9] & !shift_pressed); // 5
+		if(ps2_key[7:0] == 'h36) keys_pressed[5]  <= (ps2_key[9] & !shift_pressed); // 6
+		if(ps2_key[7:0] == 'h3D) keys_pressed[4]  <= (ps2_key[9] & !shift_pressed); // 7
+		if(ps2_key[7:0] == 'h3E) keys_pressed[3]  <= (ps2_key[9] & !shift_pressed); // 8
+		if(ps2_key[7:0] == 'h46) keys_pressed[2]  <= (ps2_key[9] & !shift_pressed); // 9
+		if(ps2_key[7:0] == 'h3E) keys_pressed[1]  <= (ps2_key[9] & shift_pressed);  // *
+		if(ps2_key[7:0] == 'h26) keys_pressed[0]  <= (ps2_key[9] & shift_pressed);  // #
+		
+		if(ps2_key[7:0] == 'h70) keys_pressed[11] <= ps2_key[9]; // Keypad 0
+		if(ps2_key[7:0] == 'h69) keys_pressed[10] <= ps2_key[9]; // Keypad 1
+		if(ps2_key[7:0] == 'h72) keys_pressed[9]  <= ps2_key[9]; // Keypad 2
+		if(ps2_key[7:0] == 'h7A) keys_pressed[8]  <= ps2_key[9]; // Keypad 3
+		if(ps2_key[7:0] == 'h6B) keys_pressed[7]  <= ps2_key[9]; // Keypad 4
+		if(ps2_key[7:0] == 'h73) keys_pressed[6]  <= ps2_key[9]; // Keypad 5
+		if(ps2_key[7:0] == 'h74) keys_pressed[5]  <= ps2_key[9]; // Keypad 6
+		if(ps2_key[7:0] == 'h6C) keys_pressed[4]  <= ps2_key[9]; // Keypad 7
+		if(ps2_key[7:0] == 'h75) keys_pressed[3]  <= ps2_key[9]; // Keypad 8
+		if(ps2_key[7:0] == 'h7D) keys_pressed[2]  <= ps2_key[9]; // Keypad 9
+		if(ps2_key[7:0] == 'h7C) keys_pressed[1]  <= ps2_key[9]; // Keypad *
+		if(ps2_key[7:0] == 'h4A) keys_pressed[0]  <= ps2_key[9]; // s/ (# replacement)
+	end
+end
 
 /////////////////  RESET  /////////////////////////
 
@@ -420,7 +462,7 @@ video_mixer #(.LINE_LENGTH(290), .GAMMA(1)) video_mixer
 
 ////////////////  Control  ////////////////////////
 
-wire [0:19] keypad0 = {joya[8],joya[9],joya[10],joya[11],joya[12],joya[13],joya[14],joya[15],joya[16],joya[17],joya[6],joya[7],joya[18],joya[19],joya[3],joya[2],joya[1],joya[0],joya[4],joya[5]};
+wire [0:19] keypad0 = {joya[8],joya[9],joya[10],joya[11],joya[12],joya[13],joya[14],joya[15],joya[16],joya[17],joya[6],joya[7],joya[18],joya[19],joya[3],joya[2],joya[1],joya[0],joya[4],joya[5]} | {keys_pressed, 8'b00000000};
 wire [0:19] keypad1 = {joyb[8],joyb[9],joyb[10],joyb[11],joyb[12],joyb[13],joyb[14],joyb[15],joyb[16],joyb[17],joyb[6],joyb[7],joyb[18],joyb[19],joyb[3],joyb[2],joyb[1],joyb[0],joyb[4],joyb[5]};
 wire [0:19] keypad[2] = '{keypad0,keypad1};
 
